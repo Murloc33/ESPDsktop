@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Управление светодиодной лентой</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resoursec.qrc">
+    <normaloff>:/development.png</normaloff>:/development.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow {
@@ -300,12 +304,14 @@ QStatusBar {
      <x>0</x>
      <y>0</y>
      <width>502</width>
-     <height>29</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <resources/>
+ <resources>
+  <include location="resoursec.qrc"/>
+ </resources>
  <connections/>
 </ui>

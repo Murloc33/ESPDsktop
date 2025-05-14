@@ -1,18 +1,20 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "pingworker.h"
+
 #include <QColorDialog>
 #include <QProcess>
+#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
-	SetUpCSSStyle();
 	GetDeviceInfo();
-//	connect(&m_timer, &QTimer::timeout, this, &MainWindow::slotCheckDevice);
-//	m_timer.start(m_checkInterval);
+    connect(&m_timer, &QTimer::timeout, this, &MainWindow::startPingInSeparateThread);
+    m_timer.start(m_checkInterval);
 }
 
 MainWindow::~MainWindow()
@@ -24,33 +26,33 @@ void MainWindow::SetDeviceMode(int mode)
 {
 	QUrlQuery postData;
 	postData.addQueryItem("mode", QString::number(mode));
-	SendRequest("http://192.168.0.13/mode", Method::POST, postData);
+    SendRequest("http://192.168.0.19/mode", Method::POST, postData);
 }
 
 void MainWindow::SetDeviceBrightness(int brightness)
 {
 	QUrlQuery postData;
 	postData.addQueryItem("brightness", QString::number(brightness));
-	SendRequest("http://192.168.0.13/brightness", Method::POST, postData);
+    SendRequest("http://192.168.0.19/brightness", Method::POST, postData);
 }
 
 void MainWindow::SetDeviceState(int state)
 {
 	QUrlQuery postData;
 	postData.addQueryItem("state", QString::number(state));
-	SendRequest("http://192.168.0.13/state", Method::POST, postData);
+    SendRequest("http://192.168.0.19/state", Method::POST, postData);
 }
 
 void MainWindow::SetDeviceColor(int color)
 {
 	QUrlQuery postData;
 	postData.addQueryItem("color", QString::number(color));
-	SendRequest("http://192.168.0.13/color", Method::POST, postData);
+    SendRequest("http://192.168.0.19/color", Method::POST, postData);
 }
 
 void MainWindow::GetDeviceInfo()
 {
-	SendRequest("http://192.168.0.13/info", Method::GET);
+    SendRequest("http://192.168.0.19/info", Method::GET);
 }
 
 void MainWindow::SetUpDeviceInfo(QByteArray info)
@@ -124,7 +126,25 @@ bool MainWindow::isDeviceConnected(const QString &ipAddress)
 		return false;
 	}
 
-	return (pingProcess.exitCode() == 0);
+    return (pingProcess.exitCode() == 0);
+}
+
+void MainWindow::startPingInSeparateThread() {
+    QThread* thread = new QThread();
+    PingWorker* worker = new PingWorker(m_ipAddress);
+
+    worker->moveToThread(thread);
+
+    connect(thread, &QThread::started, worker, &PingWorker::doPing);
+    connect(worker, &PingWorker::pingFinished, [&](bool success) {
+        qDebug() << "Ping finished with:" << success;
+        slotSetDeviceStatus(success);
+    });
+    connect(worker, &PingWorker::pingFinished, thread, &QThread::quit);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    connect(thread, &QThread::finished, worker, &PingWorker::deleteLater);
+
+    thread->start();
 }
 
 void MainWindow::on_pb_fill_clicked()
@@ -168,25 +188,16 @@ void MainWindow::on_pb_river_clicked()
 	UpdateMode();
 }
 
-void MainWindow::slotCheckDevice()
+
+void MainWindow::slotSetDeviceStatus(bool isOnline)
 {
-	bool isConnected = isDeviceConnected(m_ipAddress);
-
-	if (isConnected != m_lastStatus) {
-		m_lastStatus = isConnected;
-		if (isConnected) {
-			qDebug() << "Устройство" << m_ipAddress << "подключено к сети";
-			ui->l_isConnected->setText("Online");
-		} else {
-			qDebug() << "Устройство" << m_ipAddress << "отключилось от сети";
-			ui->l_isConnected->setText("Offline");
-		}
-	}
-}
-
-void MainWindow::SetUpCSSStyle()
-{
-
+    if (isOnline) {
+        qDebug() << "Устройство" << m_ipAddress << "подключено к сети";
+        ui->l_isConnected->setText("Online");
+    } else {
+        qDebug() << "Устройство" << m_ipAddress << "отключилось от сети";
+        ui->l_isConnected->setText("Offline");
+    }
 }
 
 
@@ -218,7 +229,6 @@ void MainWindow::SendRequest(const QString &url, const Method method, const QUrl
 	QUrl q_url(url);
 	QNetworkRequest request(q_url);
 	request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-	qDebug() << postData.toString();
 	switch (method) {
 	case Method::GET:
 		m_reply = m_manager->get(request);

@@ -10,10 +10,12 @@ CONFIG += c++20
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    pingworker.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    pingworker.h
 
 FORMS += \
     mainwindow.ui
@@ -22,3 +24,6 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    resoursec.qrc

@@ -43,9 +43,7 @@ private slots:
 	void on_pb_on_clicked();
 	void on_pb_color_clicked();
 
-	void slotCheckDevice();
-
-	void SetUpCSSStyle();
+    void slotSetDeviceStatus(bool isOnline);
 
 private:
 	void SendRequest(const QString &url, const Method method, const QUrlQuery &postData = {});
@@ -63,10 +61,12 @@ private:
 
 	bool isDeviceConnected(const QString& ipAddress);
 
+    void startPingInSeparateThread();
+
 private:
 	Ui::MainWindow	*ui;
 
-	QString			m_ipAddress = "192.168.0.13";
+    QString			m_ipAddress = "192.168.0.19";
 
 	int				m_cur_active_mode = 0;
 
